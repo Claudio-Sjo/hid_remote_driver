@@ -45,12 +45,17 @@ struct st_hid_device hid_device;
 #define MODE_LEARN    1
 #define MODE_MAP      2
 
+#define	MAIN_REVISION	1
+#define	REV_LEVEL		"3a"
+
 static void print_usage(void)
 {
+	printf("hid_mapper ver %d.%s :\n",MAIN_REVISION,REV_LEVEL);	
+	printf("** Note that hid_mapper must be run with root privileges **\n");
 	printf("Usage :\n");
-	printf("  hid_mapper --list-devices [ --lookup-id ]\n");
-	printf("  hid_mapper [ --lookup-id ] [ --disable-repetition ] --manufacturer <manufacturer> --product <product name> [ --map <map file>] [ --map-mouse <map file> ]\n");
-	printf("  hid_mapper [ --lookup-id ] --learn --manufacturer <manufacturer> --product <product name>\n");
+	printf("  hid_mapper --list-devices [ --lookup-id ] [--wait-device <seconds>]\n");
+	printf("  hid_mapper [ --lookup-id ] [ --disable-repetition ] --manufacturer <manufacturer> --product <product name> [ --map <map file>] [ --map-mouse <map file> ] [--wait-device <seconds>]\n");
+	printf("  hid_mapper [ --lookup-id ] --learn --manufacturer <manufacturer> --product <product name> [--wait-device <seconds>]\n");
 }
 
 int main(int argc,char **argv)
@@ -89,7 +94,10 @@ int main(int argc,char **argv)
 	
 	if(argc==3 && strcmp(argv[1],"--list-devices")==0 && strcmp(argv[2],"--lookup-id")==0)
 		return lookup_hid_product(LOOKUP_MODE_ID,0,0,0);
-	
+
+	if(argc==3 && strcmp(argv[2],"--list-devices")==0 && strcmp(argv[1],"--lookup-id")==0)
+		return lookup_hid_product(LOOKUP_MODE_ID,0,0,0);			
+		
 	manufacturer[0] = '\0';
 	product[0] = '\0';
 	if(argc>=5)
@@ -193,30 +201,27 @@ int main(int argc,char **argv)
 	// Lookup for specified HID device
 	int re,max_hid_fd;
 	
-	if(wait>0)
+	if(wait>0) {
 		printf("Waiting device for %d second(s)\n",wait);
 	
-	while(true)
-	{
-		re = lookup_hid_product(lookup_mode,manufacturer,product,&hid_device);
+		while(true)
+		{
+			re = lookup_hid_product(lookup_mode,manufacturer,product,&hid_device);
 		
-		if(re>=0 || wait<=0)
+			if(re>=0 || wait<=0)
 			break;
 		
-		wait--;
-		sleep(1);
-	}
+			wait--;
+			sleep(1);
+		} // while
 	
-	if(re<0)
-	{
-		fprintf(stderr,"Unable to find specified HID device\n");
-		return EXIT_FAILURE;
-	}
+		if(re<0)
+		{
+			fprintf(stderr,"Unable to find specified HID device with error =%d\n",re);
+			return EXIT_FAILURE;
+		}
+	} // if
 		
-	if(wait!=-1)
-	{
-		re = lookup_hid_product(lookup_mode,manufacturer,product,&hid_device);
-	}
 	else
 	{
 		re = lookup_hid_product(lookup_mode,manufacturer,product,&hid_device);
